@@ -1,6 +1,6 @@
 <!-- Animal Crossing: City Folk (USA/Asia, Rev 1) -- SDHC Support [Bero, ported by quatric] -->
 <wiidisc version="1" root="/">
-  <id game="RUUE01" />
+  <id game="RUUE01" version="1" />
   <options>
     <section name="Animal Crossing: City Folk">
       <option name="SDHC Card Support" default="1">

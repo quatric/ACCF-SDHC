@@ -1,6 +1,8 @@
 $SDHC Support [Bero, ported by quatric]
 *Animal Crossing: City Folk Deluxe (PAL)
 *Adds SDHC (>2GB) SD card support.
+*FOR RUUP02 REVISION 0 ONLY -- check your disc version.
+*Other revisions of RUUP02 use different addresses and WILL crash.
 * hook1 SD_GetDeviceStatus: latch SDHC bit
 C2223F7C 00000004
 546302D7 41820014

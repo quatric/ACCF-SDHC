@@ -1,6 +1,6 @@
 <!-- Animal Crossing: City Folk Deluxe (PAL) -- SDHC Support [Bero, ported by quatric] -->
 <wiidisc version="1" root="/">
-  <id game="RUUP02" />
+  <id game="RUUP02" version="0" />
   <options>
     <section name="Animal Crossing: City Folk">
       <option name="SDHC Card Support" default="1">

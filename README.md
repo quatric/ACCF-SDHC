@@ -32,30 +32,68 @@ It touches only the SD driver.
 
 ## Supported discs
 
-| Disc ID  | Version                        | Rebase from `RUUE01` |
-|----------|--------------------------------|----------------------|
-| `RUUE01` | City Folk (USA/Asia, Rev 1)    | —                    |
-| `RUUE02` | City Folk **Deluxe** (USA)     | −292 (−0x124)        |
-| `RUUJ02` | City Folk **Deluxe** (Japan)   | +124 (+0x7C)         |
-| `RUUP02` | City Folk **Deluxe** (PAL)     | −724 (−0x2D4)        |
+| File       | Disc ID  | Rev | Version                                       | Rebase   |
+|------------|----------|-----|-----------------------------------------------|----------|
+| `RUUE01v0` | `RUUE01` | 0   | City Folk (USA)                               | −292     |
+| `RUUE01v1` | `RUUE01` | 1   | City Folk (USA/Asia)                          | —        |
+| `RUUJ01v1` | `RUUJ01` | 1   | Machi e Ikou yo: Doubutsu no Mori (Japan)     | +124     |
+| `RUUJ01v2` | `RUUJ01` | 2   | Machi e Ikou yo: Doubutsu no Mori (Japan)     | +416     |
+| `RUUE02`   | `RUUE02` | 0   | City Folk **Deluxe** (USA)                    | −292     |
+| `RUUJ02`   | `RUUJ02` | 1   | City Folk **Deluxe** (Japan)                  | +124     |
+| `RUUP02`   | `RUUP02` | 0   | City Folk **Deluxe** (PAL)                    | −724     |
 
-The three Deluxe builds are uniform rebases of the USA Rev 1 map. Helper and
-trampoline addresses are absolute and do **not** move between regions; only the
-ten patch sites shift, along with the two `bctr` return addresses embedded in the
-hook2 and hook4 payloads.
+Rebase is relative to the `RUUE01` Rev 1 site map. Helper and trampoline
+addresses are absolute and do **not** move between builds; only the ten patch
+sites shift, along with the two `bctr` return addresses embedded in the hook2 and
+hook4 payloads.
 
-### Not supported: `RUUK02` (Deluxe, Korea) — and it does not need to be
+### ⚠️ Revision matters — check yours first
 
-The Korean Deluxe build ships a **newer PFD library revision** that already
-supports SDHC natively. Its `pfd_sddrv_get_total_sectors` (`0x80220400`) tests
-`CSD_STRUCTURE` and branches to its own CSD v2 path at `0x80220504` computing
-`(C_SIZE + 1) << 10` sectors — the same result this patch adds — and its mount
-code already checks the OCR CCS bit (`0x802222F0`, `0x80222324`), which the other
-regions do not. It also carries `pfd_sddrv_calc_fat32_mbr_bpb()`, absent from
-`RUUE02`.
+`RUUE01` covers **both** USA revisions and `RUUJ01` covers **both** Japanese
+ones, and each revision needs a *different* set of addresses. Applying the wrong
+revision's patch overwrites unrelated live code — all four hook sites land on
+different instructions — and **will crash**.
 
-**Do not patch RUUK02.** Applying this would be redundant and risks
-double-converting block addresses.
+The Riivolution XMLs match on the disc version byte as well as the game ID
+(`<id game="RUUE01" version="0" />`), so they cannot misapply. **Gecko codes
+cannot do this** — cheat managers match on the 6-character ID only and have no
+way to test the revision, so picking the right file is on you. Each Gecko file
+states its revision in the header.
+
+You can read the disc version byte at offset 7 of the disc header (offset
+`0x207` in a `.wbfs`).
+
+### Not supported: Europe / PAL vanilla (`RUUP01`)
+
+Not done — the PAL vanilla disc (*Animal Crossing: Let's Go to the City*) was not
+available to derive a site map from. Deluxe PAL (`RUUP02`) **is** covered.
+
+Its rebase of −724 is unique among the builds tested, which is a hint but not
+evidence: `RUUE02` shares Rev 0's −292 and `RUUJ02` shares JP Rev 1's +124, so
+each Deluxe build appears to be built on its region's vanilla base. That would
+suggest `RUUP01` also sits at −724, but **do not assume it** — it has not been
+checked against a real disc, and an unverified guess here crashes.
+
+### Not supported: Korea (`RUUK01`, `RUUK02`) — and it does not need to be
+
+Both the Korean vanilla disc and Korean Deluxe ship a **newer PFD library
+revision** that already supports SDHC natively.
+
+`pfd_sddrv_get_total_sectors` (`0x80220400`) tests `CSD_STRUCTURE`
+(`rlwinm. r0,r0,0,9,9` at `0x80220484`) and branches to its own CSD v2 path at
+`0x80220504` computing `(C_SIZE + 1) << 10` sectors — the same result this patch
+adds — and the mount code already checks the OCR CCS bit (`0x802222F0`,
+`0x80222324`), which the other regions do not. Both carry
+`pfd_sddrv_calc_fat32_mbr_bpb()`, absent from every non-Korean build, and both
+have the CSD v2 test at the identical address, so Korean Deluxe is built directly
+on Korean vanilla.
+
+**Do not patch either Korean disc.** It would be redundant and risks
+double-converting block addresses. They should already work with SDHC cards as
+shipped.
+
+Note the Korean vanilla disc also requires **IOS 48**, not IOS 38 like every
+other build here.
 
 ## Contents
 

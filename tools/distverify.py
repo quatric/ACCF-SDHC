@@ -35,7 +35,7 @@ def rel(w, at):
     return at + off
 
 
-for gid, (label, src, delta) in dist.TARGETS.items():
+for gid, (label, src, delta, disc_id, disc_ver) in sorted(dist.TARGETS.items()):
     out = os.path.join(dist.OUT, gid, 'sys', 'main.dol')
     if not os.path.exists(out):
         check(False, '%s: no output DOL' % gid)

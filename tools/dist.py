@@ -17,16 +17,27 @@ import build
 
 OUT = paths.DIST_DIR
 
-# id -> (label, source main.dol, delta from the RUUE01 Rev1 map)
+# key -> (label, source main.dol, delta from the RUUE01 Rev1 map, disc id, disc version)
+#
+# The key is deliberately NOT the disc id. RUUE01 covers both USA revisions and
+# RUUJ01 both Japanese ones, and each revision needs a *different* delta -- so the
+# disc version byte has to take part in the match. Applying one revision's patch
+# to the other would branch into the middle of an unrelated function.
 TARGETS = {
-    'RUUE01': ('Animal Crossing: City Folk (USA/Asia, Rev 1)',
-               paths.ACCF_DOL, 0),
-    'RUUE02': ('Animal Crossing: City Folk Deluxe (USA)',
-               os.path.join(paths.SRC_IMAGES, 'RUUE02/sys/main.dol'), -292),
-    'RUUJ02': ('Animal Crossing: City Folk Deluxe (Japan)',
-               os.path.join(paths.SRC_IMAGES, 'RUUJ02/sys/main.dol'), 124),
-    'RUUP02': ('Animal Crossing: City Folk Deluxe (PAL)',
-               os.path.join(paths.SRC_IMAGES, 'RUUP02/sys/main.dol'), -724),
+    'RUUE01v0': ('Animal Crossing: City Folk (USA, Rev 0)',
+                 os.path.join(paths.SRC_IMAGES, 'RUUE01r0/sys/main.dol'), -292, 'RUUE01', 0),
+    'RUUE01v1': ('Animal Crossing: City Folk (USA/Asia, Rev 1)',
+                 paths.ACCF_DOL, 0, 'RUUE01', 1),
+    'RUUJ01v1': ('Machi e Ikou yo: Doubutsu no Mori (Japan, Rev 1)',
+                 os.path.join(paths.SRC_IMAGES, 'RUUJ01r1/sys/main.dol'), 124, 'RUUJ01', 1),
+    'RUUJ01v2': ('Machi e Ikou yo: Doubutsu no Mori (Japan, Rev 2)',
+                 os.path.join(paths.SRC_IMAGES, 'RUUJ01r2/sys/main.dol'), 416, 'RUUJ01', 2),
+    'RUUE02':   ('Animal Crossing: City Folk Deluxe (USA)',
+                 os.path.join(paths.SRC_IMAGES, 'RUUE02/sys/main.dol'), -292, 'RUUE02', 0),
+    'RUUJ02':   ('Animal Crossing: City Folk Deluxe (Japan)',
+                 os.path.join(paths.SRC_IMAGES, 'RUUJ02/sys/main.dol'), 124, 'RUUJ02', 1),
+    'RUUP02':   ('Animal Crossing: City Folk Deluxe (PAL)',
+                 os.path.join(paths.SRC_IMAGES, 'RUUP02/sys/main.dol'), -724, 'RUUP02', 0),
 }
 
 
@@ -97,10 +108,13 @@ def verify_target(d, delta):
     return bad
 
 
-def riivolution_xml(gid, label, patches):
+def riivolution_xml(disc_id, disc_ver, label, patches):
+    # The version attribute is load-bearing, not decoration: RUUE01 and RUUJ01
+    # each cover two revisions with different site maps, so matching on the game
+    # id alone would happily apply the wrong one.
     L = ['<!-- %s -- SDHC Support [Bero, ported by quatric] -->' % label,
          '<wiidisc version="1" root="/">',
-         '  <id game="%s" />' % gid,
+         '  <id game="%s" version="%d" />' % (disc_id, disc_ver),
          '  <options>',
          '    <section name="Animal Crossing: City Folk">',
          '      <option name="SDHC Card Support" default="1">',
@@ -115,11 +129,18 @@ def riivolution_xml(gid, label, patches):
     return '\n'.join(L)
 
 
-def gecko_text(gid, label, delta):
-    """Gecko form, rebased. C2/04/06 codes address memory directly."""
+def gecko_text(disc_id, disc_ver, label, delta):
+    """Gecko form, rebased. C2/04/06 codes address memory directly.
+
+    Cheat managers match on the 6-character disc id only and have no way to test
+    the disc version, so RUUE01 rev 0 vs rev 1 (and RUUJ01 rev 1 vs rev 2) cannot
+    be told apart by the format itself. The revision is called out in the header
+    because getting it wrong branches into an unrelated function."""
     out = ['$SDHC Support [Bero, ported by quatric]',
            '*%s' % label,
-           '*Adds SDHC (>2GB) SD card support.']
+           '*Adds SDHC (>2GB) SD card support.',
+           '*FOR %s REVISION %d ONLY -- check your disc version.' % (disc_id, disc_ver),
+           '*Other revisions of %s use different addresses and WILL crash.' % disc_id]
     for name, addr, orig, payload in build.HOOKS:
         p = rebase_payload(payload, delta)
         if len(p) % 2:
@@ -149,32 +170,32 @@ def main():
     os.makedirs(os.path.join(OUT, 'riivolution'))
     os.makedirs(os.path.join(OUT, 'gecko'))
     rc = 0
-    for gid, (label, src, delta) in TARGETS.items():
+    for key, (label, src, delta, disc_id, disc_ver) in sorted(TARGETS.items()):
         if not os.path.exists(src):
-            print('  SKIP %s: no source DOL at %s' % (gid, src))
+            print('  SKIP %-9s no source DOL at %s' % (key, src))
             rc = 1
             continue
         d = Dol(src)
         bad = verify_target(d, delta)
         if bad:
-            print('  FAIL %s: %s' % (gid, ', '.join(bad)))
+            print('  FAIL %-9s %s' % (key, ', '.join(bad)))
             rc = 1
             continue
         patches, cave_end = rebased_patches(delta)
         data = bytearray(d.data)
         for va, blob in patches:
             fo = d.v2f(va)
-            assert fo is not None, '%s: unmapped 0x%08X' % (gid, va)
+            assert fo is not None, '%s: unmapped 0x%08X' % (key, va)
             data[fo:fo + len(blob)] = blob
-        ddir = os.path.join(OUT, gid, 'sys')
+        ddir = os.path.join(OUT, key, 'sys')
         os.makedirs(ddir)
         open(os.path.join(ddir, 'main.dol'), 'wb').write(bytes(data))
-        open(os.path.join(OUT, 'riivolution', '%s.xml' % gid), 'w').write(
-            riivolution_xml(gid, label, patches))
-        open(os.path.join(OUT, 'gecko', '%s.txt' % gid), 'w').write(
-            gecko_text(gid, label, delta))
-        print('  ok   %-7s delta %+5d  %d writes  cave..0x%08X  %s'
-              % (gid, delta, len(patches), cave_end, label))
+        open(os.path.join(OUT, 'riivolution', '%s.xml' % key), 'w').write(
+            riivolution_xml(disc_id, disc_ver, label, patches))
+        open(os.path.join(OUT, 'gecko', '%s.txt' % key), 'w').write(
+            gecko_text(disc_id, disc_ver, label, delta))
+        print('  ok   %-9s %s v%d  delta %+5d  %d writes  cave..0x%08X  %s'
+              % (key, disc_id, disc_ver, delta, len(patches), cave_end, label))
     return rc
 
 
