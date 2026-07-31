@@ -38,9 +38,15 @@ It touches only the SD driver.
 | `RUUE01v1` | `RUUE01` | 1   | City Folk (USA/Asia)                          | —        |
 | `RUUJ01v1` | `RUUJ01` | 1   | Machi e Ikou yo: Doubutsu no Mori (Japan)     | +124     |
 | `RUUJ01v2` | `RUUJ01` | 2   | Machi e Ikou yo: Doubutsu no Mori (Japan)     | +416     |
+| `RUUP01v0` | `RUUP01` | 0   | Let's Go to the City (Europe)                 | −724     |
+| `RUUP01v1` | `RUUP01` | 1   | Let's Go to the City (Europe)                 | −432     |
 | `RUUE02`   | `RUUE02` | 0   | City Folk **Deluxe** (USA)                    | −292     |
 | `RUUJ02`   | `RUUJ02` | 1   | City Folk **Deluxe** (Japan)                  | +124     |
 | `RUUP02`   | `RUUP02` | 0   | City Folk **Deluxe** (PAL)                    | −724     |
+
+Every retail region and revision is covered. Each Deluxe build turns out to share
+its region's vanilla base exactly — `RUUE02` = USA Rev 0 (−292), `RUUJ02` = JP
+Rev 1 (+124), `RUUP02` = Europe Rev 0 (−724).
 
 Rebase is relative to the `RUUE01` Rev 1 site map. Helper and trampoline
 addresses are absolute and do **not** move between builds; only the ten patch
@@ -49,8 +55,8 @@ hook4 payloads.
 
 ### ⚠️ Revision matters — check yours first
 
-`RUUE01` covers **both** USA revisions and `RUUJ01` covers **both** Japanese
-ones, and each revision needs a *different* set of addresses. Applying the wrong
+`RUUE01`, `RUUJ01` and `RUUP01` each cover **two revisions** under one disc ID,
+and each revision needs a *different* set of addresses. Applying the wrong
 revision's patch overwrites unrelated live code — all four hook sites land on
 different instructions — and **will crash**.
 
@@ -62,17 +68,6 @@ states its revision in the header.
 
 You can read the disc version byte at offset 7 of the disc header (offset
 `0x207` in a `.wbfs`).
-
-### Not supported: Europe / PAL vanilla (`RUUP01`)
-
-Not done — the PAL vanilla disc (*Animal Crossing: Let's Go to the City*) was not
-available to derive a site map from. Deluxe PAL (`RUUP02`) **is** covered.
-
-Its rebase of −724 is unique among the builds tested, which is a hint but not
-evidence: `RUUE02` shares Rev 0's −292 and `RUUJ02` shares JP Rev 1's +124, so
-each Deluxe build appears to be built on its region's vanilla base. That would
-suggest `RUUP01` also sits at −724, but **do not assume it** — it has not been
-checked against a real disc, and an unverified guess here crashes.
 
 ### Not supported: Korea (`RUUK01`, `RUUK02`) — and it does not need to be
 

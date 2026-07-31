@@ -1,0 +1,30 @@
+<!-- Animal Crossing: Let's Go to the City (Europe, Rev 1) -- SDHC Support [Bero, ported by quatric] -->
+<wiidisc version="1" root="/">
+  <id game="RUUP01" version="1" />
+  <options>
+    <section name="Animal Crossing: City Folk">
+      <option name="SDHC Card Support" default="1">
+        <choice name="Enabled"><patch id="sdhc" /></choice>
+      </option>
+    </section>
+  </options>
+  <patch id="sdhc">
+    <memory offset="0x80005C00" value="3EC0800062D65C7082D600002C160000418200087C8023787C0400404E800020" />
+    <memory offset="0x80005C20" value="3F00800063185C70831800002C1800004182000C7CB92B78480000087F2531D6548006FF4E800020" />
+    <memory offset="0x80005C48" value="3C60800060635C70806300002C0300004182000C3B390001480000087F39BA144E800020" />
+    <memory offset="0x80005C80" value="546302D741820014386000013C80800060845C70906400002C1D00004821E408" />
+    <memory offset="0x80005CA0" value="806100145463025341820028380000098061000C5463C43E386300011CC304003C6080216063F9587C6903A64E80042080A1000C48219C48" />
+    <memory offset="0x80005CD8" value="38C000002C1600004182000838C00001600000004821E48C" />
+    <memory offset="0x80005CF0" value="807C001C2C030001806DD6CC418200348003000090190000800300049019000480030008901900088003000C9019000C3C608022606342A87C6903A64E800420600000004821E56C" />
+    <memory offset="0x8021F520" value="4BDE6701" />
+    <memory offset="0x8021F66C" value="4BDE65DD" />
+    <memory offset="0x8021F71C" value="4BDE6505" />
+    <memory offset="0x8021F868" value="4BDE63E1" />
+    <memory offset="0x8021F918" value="4BDE6388" />
+    <memory offset="0x802240A0" value="4BDE1BE0" />
+    <memory offset="0x80224174" value="4BDE1B64" />
+    <memory offset="0x8022429C" value="4BDE1A54" />
+    <memory offset="0x802246CC" value="4BDE1535" />
+    <memory offset="0x80224A08" value="4BDE11F9" />
+  </patch>
+</wiidisc>
