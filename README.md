@@ -6,14 +6,9 @@ Ported from **SDHC Extension 1.1 [Bero]** by way of *My Pokémon Ranch*.
 
 > ## ⚠️ Work in progress — not ready for use
 >
-> This patch is **not finished and not confirmed working on hardware.** It has
-> been verified statically and confirmed resident in emulator memory, but the SD
-> path itself has **never actually been exercised** — no SDHC card has been read
-> or written with it, on console or in emulation.
->
-> There is also a known unresolved problem, described under
-> [Open problems](#open-problems), that may mean the patch cannot work as-is.
-> Do not rely on this for real saves yet.
+> The SDHC path has been exercised successfully in Dolphin with a 4 GB FAT32
+> card after retargeting the title from IOS 38 to IOS 58. The TMD change is
+> required because IOS 38 does not initialize SDHC cards.
 
 ## What it does
 
@@ -111,26 +106,23 @@ Nine of the ten sites are byte-identical to the *My Pokémon Ranch* originals, s
 Bero's register assumptions carry over unchanged. The tenth (hook4) differs only
 in its r13 SDA offset.
 
-## Open problems
+## IOS requirement
 
-**The card may never initialise.** The game issues its own ACMD41
-(`li r4,0x29` at `0x8021F120` in `RUUE01`), and that call passes **argument 0** —
-no HCS bit (`0x40000000`). Per the SD spec, an SDHC card will not complete
-initialisation if the host never requests high capacity. That is the standard
-first *inquiry* ACMD41, so a second one may supply the real voltage window and
-HCS — the command builder at `0x802202B0` takes its argument from a struct field
-rather than a literal — but this has not been confirmed. If no HCS is ever set,
-the port needs an additional hook there and will not work until it has one.
+The stock TMD requests **IOS 38**, whose SDIO module does not take the SDv2
+initialization path. This is why the card can report CCS/SDHC while remaining
+uninitialized; the ACMD41 literal is not the missing patch point. Retarget the
+TMD to **IOS 58** with `tools/patch_tmd_ios.py` (or use `tools/mkios58.sh` for
+a rebuilt WBFS):
 
-**IOS.** The disc TMD requires **IOS 38**. Whether IOS 38's SDIO module supports
-SDHC at all is unconfirmed. This cannot be answered in Dolphin, which HLEs
-`/dev/sdio` and supports SDHC regardless of IOS version. `tools/mkios58.sh`
-retargets a disc at IOS 58 for testing by rewriting the TMD `sys_version` field;
-that invalidates the TMD signature, so its output is for testing only.
+```sh
+python3 tools/patch_tmd_ios.py path/to/tmd.bin 58
+python3 tools/patch_tmd_ios.py path/to/tmd.bin --show
+```
 
-**Untested end to end.** The flag at `0x80005C70` has never been observed set,
-because City Folk only mounts the card when an SD feature is used, not at the
-title screen.
+This invalidates the TMD signature. It works in Dolphin and with a fakesigned
+loader; real hardware also needs IOS 58 installed and a fakesigned/repacked
+WAD. With IOS 58, Dolphin reported the card initialized, performed SDHC block
+DMA, and completed a photo save.
 
 ## Verification
 
