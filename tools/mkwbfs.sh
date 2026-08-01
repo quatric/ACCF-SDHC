@@ -13,11 +13,12 @@ mkdir -p "$WORK" "$OUTD"
 
 typeset -A IMG
 IMG[RUUE01]="$SRC/Animal Crossing - City Folk (USA, Asia) (En,Fr,Es) (Rev 1).wbfs"
+IMG[RUUP01]="$SRC/Animal Crossing - Let's Go to the City (Europe) (En,Fr,De,Es,It) (Rev 1).wbfs"
 IMG[RUUE02]="$SRC/Animal Crossing City Folk Deluxe [RUUE02].wbfs"
 IMG[RUUJ02]="$SRC/Animal Crossing City Folk Deluxe [RUUJ02].wbfs"
 IMG[RUUP02]="$SRC/Animal Crossing City Folk Deluxe [RUUP02].wbfs"
 
-for ID in RUUE01 RUUE02 RUUJ02 RUUP02; do
+for ID in RUUE01 RUUP01 RUUE02 RUUJ02 RUUP02; do
   SRCIMG="${IMG[$ID]}"
   DOL="$DIST/$ID/sys/main.dol"
   FST="$WORK/$ID"
