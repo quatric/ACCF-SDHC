@@ -144,9 +144,9 @@ connection.
 
 ## Contact
 
-quatricsoftware@gmail.com
-
-No support will be provided for this tool.
+General questions or comments can be sent to
+[quatricsoftware@gmail.com](mailto:quatricsoftware@gmail.com). No support will be provided
+for this tool.
 
 ## License
 
