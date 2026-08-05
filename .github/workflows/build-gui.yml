@@ -1,8 +1,7 @@
 name: Build GUI patcher
 
 on:
-  push:
-    tags: ['v*']
+  push: {}
   workflow_dispatch: {}
 
 env:
