@@ -101,16 +101,30 @@ setup above, run the GUI:
 python3 tools/gui.py
 ```
 
-Pick a `.wbfs`/`.iso`, pick an output folder, click Patch. It extracts the
-disc, reads its own id/revision, applies the matching site map to its own
-`main.dol`, repoints the TMD at IOS 58 (see below), and rebuilds the WBFS.
-Running it from source needs [Wiimms ISO Tool](https://wit.wiimm.de/)
-(`wit`) on `PATH`; the packaged builds below bundle it, no separate install
-needed.
+Drop a `.wbfs`/`.iso` on the window (or click to browse). It extracts the disc,
+reads its own id/revision, applies the matching site map to its own `main.dol`,
+and rebuilds the image **in place** — the original is kept alongside as
+`<name>.bak`.
 
-For a quick local macOS build during development (not bundled -- `wit` still
-needs to be on `PATH`), install [PyInstaller](https://pyinstaller.org/) and
-run `tools/build_gui.sh`; this uses the checked-in `tools/ACCF-SDHC-Patcher.spec`
+Patching in place is deliberate: USB loaders key off the
+`/wbfs/<Title> [ID6]/` layout, so writing a *renamed* file next to the
+original can leave the loader unable to launch the title (it drops straight
+back to the Homebrew Channel). Keeping the filename and folder avoids that.
+
+The TMD is left completely untouched. Retargeting it to IOS 58 is what the
+SDHC *card init* needs (see [IOS requirement](#ios-requirement)), but it
+invalidates the TMD signature and requires IOS 58 to be installed, which stops
+the title launching on an ordinary setup — so it stays a separate, explicit
+step (`tools/patch_tmd_ios.py`, or `tools/mkwbfs.py --ios58`) rather than
+something done to every disc.
+
+Running from source needs [Wiimms ISO Tool](https://wit.wiimm.de/) (`wit`) on
+`PATH`, plus `tkinterdnd2` for drag-and-drop (without it the window still
+works as click-to-browse). The packaged builds below bundle both.
+
+For a quick local macOS build during development (`wit` still needs to be on
+`PATH`), install [PyInstaller](https://pyinstaller.org/) and run
+`tools/build_gui.sh`; this uses the checked-in `tools/ACCF-SDHC-Patcher.spec`
 and produces `tools/dist/ACCF-SDHC-Patcher.app`.
 
 [`.github/workflows/build-gui.yml`](.github/workflows/build-gui.yml) builds

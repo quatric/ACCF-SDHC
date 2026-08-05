@@ -1,14 +1,19 @@
 # -*- mode: python ; coding: utf-8 -*-
 import os
+from PyInstaller.utils.hooks import collect_all
 
 ICON = os.path.join(SPECPATH, '..', 'assets', 'icon.icns')
+
+# tkinterdnd2 ships per-platform tkdnd Tcl binaries that must come along, or
+# the frozen app silently loses drag-and-drop and falls back to click-to-browse.
+dnd_datas, dnd_binaries, dnd_hidden = collect_all('tkinterdnd2')
 
 a = Analysis(
     ['gui.py'],
     pathex=[],
-    binaries=[],
-    datas=[],
-    hiddenimports=[],
+    binaries=dnd_binaries,
+    datas=dnd_datas,
+    hiddenimports=dnd_hidden,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

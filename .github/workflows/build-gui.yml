@@ -35,7 +35,7 @@ jobs:
           python -c "import tkinter; print('tkinter ok')"
 
       - name: Install PyInstaller
-        run: pip install pyinstaller
+        run: pip install pyinstaller tkinterdnd2
 
       - name: Fetch and stage wit (macOS)
         if: matrix.target == 'macos-universal'
@@ -76,6 +76,7 @@ jobs:
           BINS=""
           for f in wit_bin/*; do BINS="$BINS --add-binary $f:."; done
           pyinstaller --name ACCF-SDHC-Patcher --windowed --noconfirm \
+            --collect-all tkinterdnd2 \
             --icon assets/icon.icns --target-architecture universal2 \
             $BINS --distpath pyinst_dist tools/gui.py
           cp wit-gpl-2.0.txt "pyinst_dist/ACCF-SDHC-Patcher.app/Contents/Resources/wit-gpl-2.0.txt"
@@ -88,6 +89,7 @@ jobs:
           BINS=""
           for f in wit_bin/*; do BINS="$BINS --add-binary $f:."; done
           pyinstaller --name ACCF-SDHC-Patcher --windowed --noconfirm \
+            --collect-all tkinterdnd2 \
             $BINS --distpath pyinst_dist tools/gui.py
           cp wit-gpl-2.0.txt pyinst_dist/ACCF-SDHC-Patcher/
           cd pyinst_dist
@@ -100,6 +102,7 @@ jobs:
           BINS=""
           for f in wit_bin/*; do BINS="$BINS --add-binary $f;."; done
           pyinstaller --name ACCF-SDHC-Patcher --windowed --noconfirm \
+            --collect-all tkinterdnd2 \
             --icon assets/icon.ico \
             $BINS --distpath pyinst_dist tools/gui.py
           cp wit-gpl-2.0.txt pyinst_dist/ACCF-SDHC-Patcher/

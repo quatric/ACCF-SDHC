@@ -1,27 +1,41 @@
 #!/usr/bin/env python3
-"""Small GUI front end for the SDHC patch: pick a disc image, click Patch.
+"""Drag-and-drop SDHC patcher: drop a disc image on the window, done.
 
 Unlike dist.py (which patches pre-dumped reference DOLs for every supported
 revision at once, for building the release) this works on one disc the user
 actually has: extract it, read its own id/version out of sys/boot.bin, apply
-dist.py's site map for that exact revision to its own main.dol, and rebuild
-the WBFS. No dumps/ layout or paths.py setup required.
+dist.py's site map for that exact revision to its own main.dol, and rebuild.
+
+The rebuilt image replaces the original *in place*, keeping its filename and
+folder -- USB loaders key off the `/wbfs/<Title> [ID6]/` layout, so writing a
+renamed file next to it can leave the loader unable to launch the title. The
+untouched original is kept alongside as `<name>.bak`.
+
+The TMD is deliberately left alone. Retargeting it to IOS 58 (see
+tools/patch_tmd_ios.py) invalidates its signature and requires IOS 58 to be
+installed, which stops the title launching on an ordinary setup -- so that
+stays a separate, explicit step rather than something this tool does to
+every disc it touches.
 """
 import os
 import queue
 import shutil
-import struct
 import subprocess
 import sys
 import tempfile
 import threading
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import dist
 from dol import Dol
-from patch_tmd_ios import locate as tmd_ios_offset
+
+try:
+    from tkinterdnd2 import DND_FILES, TkinterDnD
+    HAVE_DND = True
+except ImportError:                                    # fall back to click-to-browse
+    HAVE_DND = False
 
 
 def find_wit():
@@ -65,23 +79,17 @@ def key_for(disc_id, disc_ver):
     return None, None, None
 
 
-def patch_tmd(tmd_path, ios, log):
-    data = bytearray(open(tmd_path, 'rb').read())
-    off = tmd_ios_offset(data)
-    old = struct.unpack_from('>Q', data, off)[0]
-    struct.pack_into('>Q', data, off, (1 << 32) | ios)
-    open(tmd_path, 'wb').write(data)
-    log('  tmd: IOS %d -> IOS %d (signature invalidated)' % (old & 0xFF, ios))
-
-
-def run_patch(image_path, out_dir, log, done):
+def run_patch(image_path, log, done):
     try:
         wit = find_wit()
         if wit is None:
             raise RuntimeError('wit (Wiimms ISO Tool) not found: not bundled with this '
                                 'build and not on PATH')
 
-        with tempfile.TemporaryDirectory(prefix='sdhc_patch_') as fst:
+        fmt = '--iso' if image_path.lower().endswith('.iso') else '--wbfs'
+
+        with tempfile.TemporaryDirectory(prefix='sdhc_patch_') as tmp:
+            fst = os.path.join(tmp, 'fst')
             log('extracting %s...' % os.path.basename(image_path))
             r = subprocess.run([wit, 'extract', image_path, '--dest', fst,
                                  '--psel', 'data', '--overwrite', '-q'],
@@ -111,83 +119,84 @@ def run_patch(image_path, out_dir, log, done):
             if bad:
                 raise RuntimeError(
                     'disc does not match the expected site map: %s\n'
-                    'This usually means an unexpected build of the game -- do not patch it.'
+                    'Already patched, or an unexpected build of the game -- not patching it.'
                     % ', '.join(bad))
 
             patches, _cave_end = dist.rebased_patches(delta)
             data = bytearray(d.data)
             for va, blob in patches:
                 fo = d.v2f(va)
+                if fo is None:
+                    raise RuntimeError('unmapped patch address 0x%08X' % va)
                 data[fo:fo + len(blob)] = blob
             open(dol_path, 'wb').write(bytes(data))
             log('  patched main.dol (%d writes)' % len(patches))
 
-            tmd_path = find_file(fst, 'tmd.bin')
-            if tmd_path:
-                patch_tmd(tmd_path, 58, log)
-            else:
-                log('  no tmd.bin found, skipping IOS 58 patch')
-
-            os.makedirs(out_dir, exist_ok=True)
-            out = os.path.join(out_dir, '%s_SDHC.wbfs' % key)
-            log('rebuilding wbfs...')
-            r = subprocess.run([wit, 'copy', fst, '--dest', out, '--wbfs', '--overwrite', '-q'],
+            staged = os.path.join(tmp, 'patched.img')
+            log('rebuilding...')
+            r = subprocess.run([wit, 'copy', fst, '--dest', staged, fmt, '--overwrite', '-q'],
                                 capture_output=True, text=True)
             if r.returncode:
                 raise RuntimeError('rebuild failed:\n' + (r.stderr or r.stdout))
-            log('done: %s' % out)
-            done(True, out)
+
+            # Only touch the user's file once the rebuild has actually succeeded.
+            backup = image_path + '.bak'
+            if os.path.exists(backup):
+                log('  backup already exists, keeping it: %s' % os.path.basename(backup))
+            else:
+                shutil.copyfile(image_path, backup)
+                log('  backed up original -> %s' % os.path.basename(backup))
+            shutil.move(staged, image_path)
+            log('done: patched in place, %s' % os.path.basename(image_path))
+            done(True, image_path)
     except Exception as e:
         log('ERROR: %s' % e)
         done(False, str(e))
 
 
-class App(tk.Tk):
+BASE = TkinterDnD.Tk if HAVE_DND else tk.Tk
+
+
+class App(BASE):
     def __init__(self):
         super().__init__()
         self.title('ACCF SDHC Patcher')
-        self.geometry('640x420')
-        self.resizable(True, True)
-
-        self.image_var = tk.StringVar()
-        self.out_var = tk.StringVar()
+        self.geometry('560x420')
         self.msgq = queue.Queue()
+        self.busy = False
 
-        pad = {'padx': 8, 'pady': 6}
+        hint = ('Drop a .wbfs or .iso here\n\n(or click to choose one)'
+                if HAVE_DND else 'Click to choose a .wbfs or .iso')
+        self.drop = tk.Label(self, text=hint, relief='ridge', bd=2,
+                             padx=10, pady=30, cursor='hand2')
+        self.drop.pack(fill='x', padx=10, pady=10)
+        self.drop.bind('<Button-1>', lambda e: self.pick())
 
-        row = ttk.Frame(self); row.pack(fill='x', **pad)
-        ttk.Label(row, text='Disc image (.wbfs / .iso):').pack(anchor='w')
-        r2 = ttk.Frame(row); r2.pack(fill='x')
-        ttk.Entry(r2, textvariable=self.image_var).pack(side='left', fill='x', expand=True)
-        ttk.Button(r2, text='Browse...', command=self.pick_image).pack(side='left', padx=(6, 0))
+        if HAVE_DND:
+            self.drop.drop_target_register(DND_FILES)
+            self.drop.dnd_bind('<<Drop>>', self.on_drop)
 
-        row = ttk.Frame(self); row.pack(fill='x', **pad)
-        ttk.Label(row, text='Output folder:').pack(anchor='w')
-        r2 = ttk.Frame(row); r2.pack(fill='x')
-        ttk.Entry(r2, textvariable=self.out_var).pack(side='left', fill='x', expand=True)
-        ttk.Button(r2, text='Browse...', command=self.pick_out).pack(side='left', padx=(6, 0))
-
-        self.patch_btn = ttk.Button(self, text='Patch', command=self.start_patch)
-        self.patch_btn.pack(**pad)
+        tk.Label(self, text='The original is kept alongside as <name>.bak',
+                 fg='#666').pack()
 
         self.log = tk.Text(self, height=14, state='disabled', wrap='word')
-        self.log.pack(fill='both', expand=True, **pad)
+        self.log.pack(fill='both', expand=True, padx=10, pady=10)
 
         self.after(100, self.poll_queue)
 
-    def pick_image(self):
+    def on_drop(self, event):
+        paths = self.tk.splitlist(event.data)      # handles {braced paths with spaces}
+        if paths:
+            self.start(paths[0])
+
+    def pick(self):
+        if self.busy:
+            return
         p = filedialog.askopenfilename(
             title='Select disc image',
             filetypes=[('Wii disc image', '*.wbfs *.iso'), ('All files', '*')])
         if p:
-            self.image_var.set(p)
-            if not self.out_var.get():
-                self.out_var.set(os.path.dirname(p))
-
-    def pick_out(self):
-        p = filedialog.askdirectory(title='Select output folder')
-        if p:
-            self.out_var.set(p)
+            self.start(p)
 
     def append_log(self, text):
         self.log.configure(state='normal')
@@ -203,39 +212,34 @@ class App(tk.Tk):
                     self.append_log(payload)
                 elif kind == 'done':
                     ok, msg = payload
-                    self.patch_btn.configure(state='normal')
+                    self.busy = False
+                    self.drop.configure(state='normal')
                     if ok:
-                        messagebox.showinfo('Done', 'Built:\n%s' % msg)
+                        messagebox.showinfo('Done', 'Patched in place:\n%s' % msg)
                     else:
                         messagebox.showerror('Patch failed', msg)
         except queue.Empty:
             pass
         self.after(100, self.poll_queue)
 
-    def start_patch(self):
-        image_path = self.image_var.get().strip()
-        out_dir = self.out_var.get().strip()
-        if not image_path or not os.path.isfile(image_path):
-            messagebox.showerror('Missing image', 'Pick a .wbfs or .iso disc image first.')
+    def start(self, image_path):
+        if self.busy:
             return
-        if not out_dir:
-            messagebox.showerror('Missing output folder', 'Pick an output folder first.')
+        if not os.path.isfile(image_path):
+            messagebox.showerror('Not a file', '%s is not a file.' % image_path)
             return
 
+        self.busy = True
+        self.drop.configure(state='disabled')
         self.log.configure(state='normal')
         self.log.delete('1.0', 'end')
         self.log.configure(state='disabled')
-        self.patch_btn.configure(state='disabled')
-
-        def log(text):
-            self.msgq.put(('log', text))
-
-        def done(ok, msg):
-            self.msgq.put(('done', (ok, msg)))
 
         threading.Thread(
             target=run_patch,
-            args=(image_path, out_dir, log, done),
+            args=(image_path,
+                  lambda t: self.msgq.put(('log', t)),
+                  lambda ok, m: self.msgq.put(('done', (ok, m)))),
             daemon=True,
         ).start()
 
