@@ -111,8 +111,8 @@ in its r13 SDA offset.
 The stock TMD requests **IOS 38**, whose SDIO module does not take the SDv2
 initialization path. This is why the card can report CCS/SDHC while remaining
 uninitialized; the ACMD41 literal is not the missing patch point. Retarget the
-TMD to **IOS 58** with `tools/patch_tmd_ios.py` (or use `tools/mkios58.sh` for
-a rebuilt WBFS):
+TMD to **IOS 58** with `tools/patch_tmd_ios.py` (or pass `--ios58` to
+`tools/mkwbfs.py` for a rebuilt WBFS):
 
 ```sh
 python3 tools/patch_tmd_ios.py path/to/tmd.bin 58
