@@ -94,6 +94,18 @@ other build here.
 No game binaries are included, and none should ever be committed here. The tools
 operate on your own dumps; see `tools/paths.py`.
 
+To patch a single disc image you already have, without any of the dumps/
+setup above, run the GUI:
+
+```sh
+python3 tools/gui.py
+```
+
+Pick a `.wbfs`/`.iso`, pick an output folder, click Patch. It extracts the
+disc, reads its own id/revision, applies the matching site map to its own
+`main.dol`, and rebuilds the WBFS — optionally also repointing the TMD at
+IOS 58. Requires [Wiimms ISO Tool](https://wit.wiimm.de/) (`wit`) on `PATH`.
+
 ## How it works
 
 Three helper routines and four trampolines are written into dead padding in the
