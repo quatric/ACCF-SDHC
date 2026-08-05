@@ -120,12 +120,12 @@ Tool](https://wit.wiimm.de/download.html) publishes prebuilt binaries for, out
 of the fuller set Mobipeg targets. Each bundles the matching `wit` build
 (GPLv2; `wit-gpl-2.0.txt` ships alongside it) so nothing else needs to be
 installed. Every run (and additionally as release assets on a `v*` tag push)
-publishes two archives per platform: `ACCF-SDHC-Patcher-<target>.*` (app
-only) and `ACCF-SDHC-Patcher-<target>-with-gecko.*`, which additionally
-bundles `gecko/*.txt`. The Gecko codes need a code handler and manual
-address-matching per disc revision, but don't need a source dump, `wit`, or
-the GUI at all -- they're a no-tooling fallback for anyone who'd rather not
-run an unsigned downloaded app, or whose platform isn't one of the three above.
+publishes `ACCF-SDHC-Patcher-<target>.*` for each platform, plus a separate,
+platform-independent `ACCF-SDHC-Gecko-Codes.zip` of `gecko/*.txt`. The Gecko
+codes need a code handler and manual address-matching per disc revision, but
+don't need a source dump, `wit`, or the GUI at all -- they're a no-tooling
+fallback for anyone who'd rather not run an unsigned downloaded app, or whose
+platform isn't one of the three above.
 
 The app icon (`assets/icon.png`/`.ico`/`.icns`, generated from
 `assets/leaf-source.svg` by `tools/make_icon.py`) is the Animal Crossing leaf

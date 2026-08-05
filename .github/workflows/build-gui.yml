@@ -107,37 +107,32 @@ jobs:
           7z a "../ACCF-SDHC-Patcher-${{ matrix.target }}.zip" ACCF-SDHC-Patcher \
             || powershell -Command "Compress-Archive -Path ACCF-SDHC-Patcher -DestinationPath ../ACCF-SDHC-Patcher-${{ matrix.target }}.zip"
 
-      - name: Package app + Gecko codes variant
-        shell: bash
-        run: |
-          rm -rf bundle && mkdir -p bundle/gecko
-          cp gecko/*.txt bundle/gecko/
-          if [[ "${{ matrix.target }}" == windows* ]]; then
-            cp -r pyinst_dist/ACCF-SDHC-Patcher bundle/
-            cd bundle && 7z a "../ACCF-SDHC-Patcher-${{ matrix.target }}-with-gecko.zip" . \
-              || powershell -Command "Compress-Archive -Path * -DestinationPath ../ACCF-SDHC-Patcher-${{ matrix.target }}-with-gecko.zip"
-          elif [[ "${{ matrix.target }}" == macos* ]]; then
-            cp -r pyinst_dist/ACCF-SDHC-Patcher.app bundle/
-            cd bundle && zip -qr "../ACCF-SDHC-Patcher-${{ matrix.target }}-with-gecko.zip" .
-          else
-            cp -r pyinst_dist/ACCF-SDHC-Patcher bundle/
-            cd bundle && tar -czf "../ACCF-SDHC-Patcher-${{ matrix.target }}-with-gecko.tar.gz" .
-          fi
-
       - uses: actions/upload-artifact@v4
         with:
           name: ACCF-SDHC-Patcher-${{ matrix.target }}
           path: ACCF-SDHC-Patcher-${{ matrix.target }}.*
 
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ACCF-SDHC-Patcher-${{ matrix.target }}.*
+
+  gecko-codes:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Zip Gecko codes
+        run: zip -qr ACCF-SDHC-Gecko-Codes.zip gecko
+
       - uses: actions/upload-artifact@v4
         with:
-          name: ACCF-SDHC-Patcher-${{ matrix.target }}-with-gecko
-          path: ACCF-SDHC-Patcher-${{ matrix.target }}-with-gecko.*
+          name: ACCF-SDHC-Gecko-Codes
+          path: ACCF-SDHC-Gecko-Codes.zip
 
       - name: Attach to release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            ACCF-SDHC-Patcher-${{ matrix.target }}.*
-            ACCF-SDHC-Patcher-${{ matrix.target }}-with-gecko.*
+          files: ACCF-SDHC-Gecko-Codes.zip
