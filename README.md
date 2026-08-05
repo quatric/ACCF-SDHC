@@ -106,6 +106,18 @@ disc, reads its own id/revision, applies the matching site map to its own
 `main.dol`, and rebuilds the WBFS — optionally also repointing the TMD at
 IOS 58. Requires [Wiimms ISO Tool](https://wit.wiimm.de/) (`wit`) on `PATH`.
 
+To build it as a standalone app (no Python required to run it), install
+[PyInstaller](https://pyinstaller.org/) and run:
+
+```sh
+pip install pyinstaller
+tools/build_gui.sh
+```
+
+This produces `tools/dist/ACCF-SDHC-Patcher.app` (macOS) using the checked-in
+`tools/ACCF-SDHC-Patcher.spec`. `wit` still needs to be on `PATH` at runtime —
+it is not bundled.
+
 ## How it works
 
 Three helper routines and four trampolines are written into dead padding in the

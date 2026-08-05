@@ -10,6 +10,7 @@ images/
 build/
 work/
 work_ios58/
+/tools/dist/
 
 __pycache__/
 *.pyc
