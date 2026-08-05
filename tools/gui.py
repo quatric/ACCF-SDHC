@@ -11,15 +11,20 @@ folder -- USB loaders key off the `/wbfs/<Title> [ID6]/` layout, so writing a
 renamed file next to it can leave the loader unable to launch the title. The
 untouched original is kept alongside as `<name>.bak`.
 
-The TMD is deliberately left alone. Retargeting it to IOS 58 (see
-tools/patch_tmd_ios.py) invalidates its signature and requires IOS 58 to be
-installed, which stops the title launching on an ordinary setup -- so that
-stays a separate, explicit step rather than something this tool does to
-every disc it touches.
+The TMD is retargeted to IOS 58, and that is not optional: IOS 38's SDIO
+module never takes the SDv2 init path, so a disc carrying the SDHC patch but
+still requesting IOS 38 latches block addressing against a driver that cannot
+do it and dies early instead of merely failing to see the card. Verified by
+diffing a working RUUP01 build against a broken one -- the SDHC codecave was
+byte-identical and sys_version was the only functional difference.
+
+This invalidates the TMD signature, so the console needs IOS 58 installed and
+a loader that accepts fakesigned discs.
 """
 import os
 import queue
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
@@ -30,6 +35,7 @@ from tkinter import filedialog, messagebox
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import dist
 from dol import Dol
+from patch_tmd_ios import locate as tmd_ios_offset
 
 try:
     from tkinterdnd2 import DND_FILES, TkinterDnD
@@ -77,6 +83,20 @@ def key_for(disc_id, disc_ver):
         if tid == disc_id and tver == disc_ver:
             return key, label, delta
     return None, None, None
+
+
+def patch_tmd(tmd_path, ios, log):
+    data = bytearray(open(tmd_path, 'rb').read())
+    off = tmd_ios_offset(data)
+    old = struct.unpack_from('>Q', data, off)[0]
+    # sys_version's high word is always 1. If it isn't, we're not looking at
+    # sys_version -- writing here would clobber some other TMD field.
+    if old >> 32 != 1:
+        raise RuntimeError('tmd.bin: unexpected sys_version 0x%016X at 0x%X -- '
+                            'refusing to patch (this is not the IOS field)' % (old, off))
+    struct.pack_into('>Q', data, off, (1 << 32) | ios)
+    open(tmd_path, 'wb').write(data)
+    log('  tmd: IOS %d -> IOS %d (signature invalidated)' % (old & 0xFF, ios))
 
 
 def run_patch(image_path, log, done):
@@ -131,6 +151,13 @@ def run_patch(image_path, log, done):
                 data[fo:fo + len(blob)] = blob
             open(dol_path, 'wb').write(bytes(data))
             log('  patched main.dol (%d writes)' % len(patches))
+
+            tmd_path = find_file(fst, 'tmd.bin')
+            if tmd_path:
+                patch_tmd(tmd_path, 58, log)
+            else:
+                raise RuntimeError('no tmd.bin in the extracted disc -- cannot set IOS 58, '
+                                    'and the SDHC patch needs it')
 
             staged = os.path.join(tmp, 'patched.img')
             log('rebuilding...')

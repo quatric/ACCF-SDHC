@@ -111,12 +111,17 @@ Patching in place is deliberate: USB loaders key off the
 original can leave the loader unable to launch the title (it drops straight
 back to the Homebrew Channel). Keeping the filename and folder avoids that.
 
-The TMD is left completely untouched. Retargeting it to IOS 58 is what the
-SDHC *card init* needs (see [IOS requirement](#ios-requirement)), but it
-invalidates the TMD signature and requires IOS 58 to be installed, which stops
-the title launching on an ordinary setup — so it stays a separate, explicit
-step (`tools/patch_tmd_ios.py`, or `tools/mkwbfs.py --ios58`) rather than
-something done to every disc.
+It also retargets the TMD to **IOS 58**, and that is not optional. IOS 38's
+SDIO module never takes the SDv2 init path (see
+[IOS requirement](#ios-requirement)), so a disc carrying the SDHC patch while
+still requesting IOS 38 latches block addressing against a driver that cannot
+do it — the title dies early rather than merely failing to see the card.
+Confirmed by diffing a working RUUP01 build against a broken one: the SDHC
+codecave was byte-identical and `sys_version` was the only functional
+difference.
+
+This invalidates the TMD signature, so the console needs IOS 58 installed and
+a loader that accepts fakesigned discs.
 
 Running from source needs [Wiimms ISO Tool](https://wit.wiimm.de/) (`wit`) on
 `PATH`, plus `tkinterdnd2` for drag-and-drop (without it the window still
