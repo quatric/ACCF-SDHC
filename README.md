@@ -4,11 +4,32 @@ SDHC (>2 GB) SD card support for *Animal Crossing: City Folk* on Wii.
 
 Ported from **SDHC Extension 1.1 [Bero]** by way of *My Pokémon Ranch*.
 
-> ## ⚠️ Work in progress — not ready for use
->
-> The SDHC path has been exercised successfully in Dolphin with a 4 GB FAT32
-> card after retargeting the title from IOS 38 to IOS 58. The TMD change is
-> required because IOS 38 does not initialize SDHC cards.
+## Quick start
+
+1. **Download** `ACCF-SDHC-Patcher` for your platform from
+   [Releases](https://github.com/quatric/ACCF-SDHC/releases).
+2. **Drop your `.wbfs`/`.iso` on the window.** It reads the disc's own ID and
+   revision, applies the matching patch, retargets the title to IOS 58, and
+   rebuilds the image in place. The original is kept as `<name>.bak`.
+3. **Play.** Your console needs IOS 58 installed and a loader that accepts
+   fakesigned discs — the TMD change invalidates the disc signature.
+
+That's the whole thing. The patcher will refuse a disc it doesn't recognize
+rather than guess, so it cannot apply the wrong revision's addresses.
+
+If you'd rather install by hand — Gecko code, Riivolution XML, or a prebuilt
+`main.dol` — **check your disc first**:
+
+```sh
+python3 tools/identify.py "Animal Crossing - City Folk (USA).wbfs"
+```
+
+It prints the disc ID, the revision, the exact `gecko/` and `riivolution/`
+filenames that belong to it, and whether the disc is still unpatched. This
+matters: nothing in the Gecko or Riivolution formats stops you applying Rev 1
+addresses to a Rev 0 disc, and doing so silently breaks SDHC detection (the
+card comes up as an unknown device) or crashes the title. See
+[Revision matters](#️-revision-matters--check-yours-first).
 
 ## What it does
 
@@ -55,14 +76,30 @@ and each revision needs a *different* set of addresses. Applying the wrong
 revision's patch overwrites unrelated live code — all four hook sites land on
 different instructions — and **will crash**.
 
+Every file here is named for the **revision**, not the disc ID — `RUUE01v0.txt`,
+not `RUUE01.txt`. Never rename them to a bare disc ID or merge two revisions
+into one file; the suffix is the only thing distinguishing two incompatible
+address sets.
+
 The Riivolution XMLs match on the disc version byte as well as the game ID
 (`<id game="RUUE01" version="0" />`), so they cannot misapply. **Gecko codes
 cannot do this** — cheat managers match on the 6-character ID only and have no
 way to test the revision, so picking the right file is on you. Each Gecko file
 states its revision in the header.
 
-You can read the disc version byte at offset 7 of the disc header (offset
-`0x207` in a `.wbfs`).
+To find out which one you have, run:
+
+```sh
+python3 tools/identify.py <your disc image or main.dol>
+```
+
+Or read the disc version byte yourself at offset 7 of the disc header (offset
+`0x207` in a `.wbfs`, `0x7` in a `.iso`).
+
+If you applied the wrong revision's patch, restore from your `.bak` (or re-dump)
+and start over — the patch cannot be cleanly reversed in place, and
+`identify.py` will report an already-patched disc as such rather than let you
+stack a second patch on top.
 
 ### Not supported: Korea (`RUUK01`, `RUUK02`) — and it does not need to be
 
@@ -87,9 +124,10 @@ other build here.
 
 ## Contents
 
-- `gecko/` — Gecko codes, one per disc ID (needs a code handler)
-- `riivolution/` — Riivolution `<memory>` patches, one per disc ID
+- `gecko/` — Gecko codes, one per disc **revision** (needs a code handler)
+- `riivolution/` — Riivolution `<memory>` patches, one per disc **revision**
 - `tools/` — the porting, build and verification scripts
+  (`identify.py` is the one to run before installing anything by hand)
 
 No game binaries are included, and none should ever be committed here. The tools
 operate on your own dumps; see `tools/paths.py`.
@@ -139,12 +177,13 @@ Tool](https://wit.wiimm.de/download.html) publishes prebuilt binaries for, out
 of the fuller set Mobipeg targets. Each bundles the matching `wit` build
 (GPLv2; `wit-gpl-2.0.txt` ships alongside it) so nothing else needs to be
 installed. Every run (and additionally as release assets on a `v*` tag push)
-publishes `ACCF-SDHC-Patcher-<target>.*` for each platform, plus a separate,
-platform-independent `ACCF-SDHC-Gecko-Codes.zip` of `gecko/*.txt`. The Gecko
-codes need a code handler and manual address-matching per disc revision, but
-don't need a source dump, `wit`, or the GUI at all -- they're a no-tooling
-fallback for anyone who'd rather not run an unsigned downloaded app, or whose
-platform isn't one of the three above.
+publishes `ACCF-SDHC-Patcher-<target>.*` for each platform, plus two separate,
+platform-independent archives: `ACCF-SDHC-Gecko-Codes.zip` (`gecko/*.txt`) and
+`ACCF-SDHC-Riivolution.zip` (`riivolution/*.xml`). Both keep the per-revision
+filenames. The Gecko codes need a code handler and manual address-matching per
+disc revision, but don't need a source dump, `wit`, or the GUI at all -- they're
+a no-tooling fallback for anyone who'd rather not run an unsigned downloaded app,
+or whose platform isn't one of the three above.
 
 The app icon (`assets/icon.png`/`.ico`/`.icns`, generated from
 `assets/leaf-source.svg` by `tools/make_icon.py`) is the Animal Crossing leaf
@@ -191,6 +230,10 @@ each C2 hook still executes the instruction it overwrote, every `bl` redirect
 lands exactly on a helper entry, helpers end in `blr`, trampolines return to
 site+4, the cave was zero beforehand and does not overflow, and nothing outside
 the intended writes changed.
+
+`tools/identify.py` is the user-facing half of the same check: it tells you which
+patch a given disc takes and whether that disc is unpatched, already patched, or
+some build this port doesn't know about.
 
 `tools/boottest.py` confirms the patch is resident in live MEM1 through Dolphin's
 GDB stub (`GDBPort` in `Dolphin.ini`, launch with `-d`). The stub accepts one
