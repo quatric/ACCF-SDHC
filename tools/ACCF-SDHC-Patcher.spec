@@ -1,5 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
+import os
 
+ICON = os.path.join(SPECPATH, '..', 'assets', 'icon.icns')
 
 a = Analysis(
     ['gui.py'],
@@ -45,6 +47,6 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name='ACCF-SDHC-Patcher.app',
-    icon=None,
-    bundle_identifier=None,
+    icon=ICON,
+    bundle_identifier='net.quatric.accf-sdhc-patcher',
 )

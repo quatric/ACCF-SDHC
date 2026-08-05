@@ -104,19 +104,36 @@ python3 tools/gui.py
 Pick a `.wbfs`/`.iso`, pick an output folder, click Patch. It extracts the
 disc, reads its own id/revision, applies the matching site map to its own
 `main.dol`, and rebuilds the WBFS — optionally also repointing the TMD at
-IOS 58. Requires [Wiimms ISO Tool](https://wit.wiimm.de/) (`wit`) on `PATH`.
+IOS 58. Running it from source needs [Wiimms ISO Tool](https://wit.wiimm.de/)
+(`wit`) on `PATH`; the packaged builds below bundle it, no separate install
+needed.
 
-To build it as a standalone app (no Python required to run it), install
-[PyInstaller](https://pyinstaller.org/) and run:
+For a quick local macOS build during development (not bundled -- `wit` still
+needs to be on `PATH`), install [PyInstaller](https://pyinstaller.org/) and
+run `tools/build_gui.sh`; this uses the checked-in `tools/ACCF-SDHC-Patcher.spec`
+and produces `tools/dist/ACCF-SDHC-Patcher.app`.
 
-```sh
-pip install pyinstaller
-tools/build_gui.sh
-```
+[`.github/workflows/build-gui.yml`](.github/workflows/build-gui.yml) builds
+real, distributable binaries: macOS (universal2), Linux (x86_64), and Windows
+(x86_64) -- the three platforms [Wiimms ISO
+Tool](https://wit.wiimm.de/download.html) publishes prebuilt binaries for, out
+of the fuller set Mobipeg targets. Each bundles the matching `wit` build
+(GPLv2; `wit-gpl-2.0.txt` ships alongside it) so nothing else needs to be
+installed. Every run (and additionally as release assets on a `v*` tag push)
+publishes two archives per platform: `ACCF-SDHC-Patcher-<target>.*` (app
+only) and `ACCF-SDHC-Patcher-<target>-with-gecko.*`, which additionally
+bundles `gecko/*.txt`. The Gecko codes need a code handler and manual
+address-matching per disc revision, but don't need a source dump, `wit`, or
+the GUI at all -- they're a no-tooling fallback for anyone who'd rather not
+run an unsigned downloaded app, or whose platform isn't one of the three above.
 
-This produces `tools/dist/ACCF-SDHC-Patcher.app` (macOS) using the checked-in
-`tools/ACCF-SDHC-Patcher.spec`. `wit` still needs to be on `PATH` at runtime —
-it is not bundled.
+The app icon (`assets/icon.png`/`.ico`/`.icns`, generated from
+`assets/leaf-source.svg` by `tools/make_icon.py`) is the Animal Crossing leaf
+from [Wikimedia
+Commons](https://commons.wikimedia.org/wiki/File:Animal_Crossing_Leaf.svg).
+Commons tags it public domain (below the threshold of originality for
+copyright) but notes it may still be a protected trademark in some
+jurisdictions -- worth knowing if you redistribute your own builds.
 
 ## How it works
 

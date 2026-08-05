@@ -24,6 +24,16 @@ from dol import Dol
 from patch_tmd_ios import locate as tmd_ios_offset
 
 
+def find_wit():
+    """A wit bundled next to this app (PyInstaller build) wins over PATH."""
+    name = 'wit.exe' if os.name == 'nt' else 'wit'
+    if getattr(sys, 'frozen', False):
+        bundled = os.path.join(os.path.dirname(sys.executable), name)
+        if os.path.isfile(bundled):
+            return bundled
+    return shutil.which('wit')
+
+
 def find_file(root, name):
     for r, _, files in os.walk(root):
         if name in files:
@@ -58,12 +68,14 @@ def patch_tmd(tmd_path, ios, log):
 
 def run_patch(image_path, out_dir, ios58, log, done):
     try:
-        if shutil.which('wit') is None:
-            raise RuntimeError('wit (Wiimms ISO Tool) is not on PATH')
+        wit = find_wit()
+        if wit is None:
+            raise RuntimeError('wit (Wiimms ISO Tool) not found: not bundled with this '
+                                'build and not on PATH')
 
         with tempfile.TemporaryDirectory(prefix='sdhc_patch_') as fst:
             log('extracting %s...' % os.path.basename(image_path))
-            r = subprocess.run(['wit', 'extract', image_path, '--dest', fst,
+            r = subprocess.run([wit, 'extract', image_path, '--dest', fst,
                                  '--psel', 'data', '-q'],
                                 capture_output=True, text=True)
             if r.returncode:
@@ -112,7 +124,7 @@ def run_patch(image_path, out_dir, ios58, log, done):
             os.makedirs(out_dir, exist_ok=True)
             out = os.path.join(out_dir, '%s_SDHC.wbfs' % key)
             log('rebuilding wbfs...')
-            r = subprocess.run(['wit', 'copy', fst, '--dest', out, '--wbfs', '-q'],
+            r = subprocess.run([wit, 'copy', fst, '--dest', out, '--wbfs', '-q'],
                                 capture_output=True, text=True)
             if r.returncode:
                 raise RuntimeError('rebuild failed:\n' + (r.stderr or r.stdout))
