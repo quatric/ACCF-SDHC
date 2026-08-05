@@ -40,7 +40,7 @@ jobs:
       - name: Fetch and stage wit (macOS)
         if: matrix.target == 'macos-universal'
         run: |
-          curl -fsSL "https://wit.wiimm.de/download/wit-${{ env.WIT_VERSION }}-mac.tar.gz" -o wit.tar.gz
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 --connect-timeout 30 "https://wit.wiimm.de/download/wit-${{ env.WIT_VERSION }}-mac.tar.gz" -o wit.tar.gz
           mkdir wit_pkg && tar -xzf wit.tar.gz -C wit_pkg
           WITBIN=$(find wit_pkg -type f -path '*/bin/wit')
           GPL=$(find wit_pkg -type f -name 'gpl-2.0.txt')
@@ -51,7 +51,7 @@ jobs:
       - name: Fetch and stage wit (Linux)
         if: matrix.target == 'linux-x86_64'
         run: |
-          curl -fsSL "https://wit.wiimm.de/download/wit-${{ env.WIT_VERSION }}-x86_64.tar.gz" -o wit.tar.gz
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 --connect-timeout 30 "https://wit.wiimm.de/download/wit-${{ env.WIT_VERSION }}-x86_64.tar.gz" -o wit.tar.gz
           mkdir wit_pkg && tar -xzf wit.tar.gz -C wit_pkg
           WITBIN=$(find wit_pkg -type f -path '*/bin/wit')
           GPL=$(find wit_pkg -type f -name 'gpl-2.0.txt')
@@ -63,7 +63,7 @@ jobs:
         if: matrix.target == 'windows-x86_64'
         shell: bash
         run: |
-          curl -fsSL "https://wit.wiimm.de/download/wit-${{ env.WIT_VERSION }}-cygwin64.zip" -o wit.zip
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 --connect-timeout 30 "https://wit.wiimm.de/download/wit-${{ env.WIT_VERSION }}-cygwin64.zip" -o wit.zip
           unzip -q wit.zip
           mkdir wit_bin
           # wit.exe needs its whole cygwin runtime (cygwin1.dll etc) alongside it.
