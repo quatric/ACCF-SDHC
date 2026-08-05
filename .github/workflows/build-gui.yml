@@ -4,6 +4,12 @@ on:
   push: {}
   workflow_dispatch: {}
 
+# The default GITHUB_TOKEN is read-only on this repo, which makes the
+# release-attach steps fail with "Resource not accessible by integration".
+# Assets on a v* tag need contents: write.
+permissions:
+  contents: write
+
 env:
   # Wiimms ISO Tool release to bundle. GPLv2; see gpl-2.0.txt inside each archive.
   WIT_VERSION: v3.05a-r8638
