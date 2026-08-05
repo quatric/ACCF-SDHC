@@ -41,19 +41,23 @@ jobs:
         if: matrix.target == 'macos-universal'
         run: |
           curl -fsSL "https://wit.wiimm.de/download/wit-${{ env.WIT_VERSION }}-mac.tar.gz" -o wit.tar.gz
-          mkdir wit_pkg && tar -xzf wit.tar.gz -C wit_pkg --strip-components=1
-          chmod +x wit_pkg/bin/wit
-          mkdir wit_bin && cp wit_pkg/bin/wit wit_bin/
-          cp wit_pkg/gpl-2.0.txt wit-gpl-2.0.txt
+          mkdir wit_pkg && tar -xzf wit.tar.gz -C wit_pkg
+          WITBIN=$(find wit_pkg -type f -path '*/bin/wit')
+          GPL=$(find wit_pkg -type f -name 'gpl-2.0.txt')
+          chmod +x "$WITBIN"
+          mkdir wit_bin && cp "$WITBIN" wit_bin/
+          cp "$GPL" wit-gpl-2.0.txt
 
       - name: Fetch and stage wit (Linux)
         if: matrix.target == 'linux-x86_64'
         run: |
           curl -fsSL "https://wit.wiimm.de/download/wit-${{ env.WIT_VERSION }}-x86_64.tar.gz" -o wit.tar.gz
-          mkdir wit_pkg && tar -xzf wit.tar.gz -C wit_pkg --strip-components=1
-          chmod +x wit_pkg/bin/wit
-          mkdir wit_bin && cp wit_pkg/bin/wit wit_bin/
-          cp wit_pkg/gpl-2.0.txt wit-gpl-2.0.txt
+          mkdir wit_pkg && tar -xzf wit.tar.gz -C wit_pkg
+          WITBIN=$(find wit_pkg -type f -path '*/bin/wit')
+          GPL=$(find wit_pkg -type f -name 'gpl-2.0.txt')
+          chmod +x "$WITBIN"
+          mkdir wit_bin && cp "$WITBIN" wit_bin/
+          cp "$GPL" wit-gpl-2.0.txt
 
       - name: Fetch and stage wit (Windows / Cygwin)
         if: matrix.target == 'windows-x86_64'
