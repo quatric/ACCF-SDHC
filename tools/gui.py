@@ -25,12 +25,20 @@ from patch_tmd_ios import locate as tmd_ios_offset
 
 
 def find_wit():
-    """A wit bundled next to this app (PyInstaller build) wins over PATH."""
+    """A wit bundled with this app (PyInstaller build) wins over PATH.
+
+    --add-binary'd files land next to sys._MEIPASS, not next to the
+    executable: a plain onedir build puts them in _internal/, and a
+    windowed macOS .app puts them in Contents/Frameworks/ instead of
+    Contents/MacOS/ alongside the binary.
+    """
     name = 'wit.exe' if os.name == 'nt' else 'wit'
     if getattr(sys, 'frozen', False):
-        bundled = os.path.join(os.path.dirname(sys.executable), name)
-        if os.path.isfile(bundled):
-            return bundled
+        for base in (getattr(sys, '_MEIPASS', None), os.path.dirname(sys.executable)):
+            if base:
+                bundled = os.path.join(base, name)
+                if os.path.isfile(bundled):
+                    return bundled
     return shutil.which('wit')
 
 
@@ -66,7 +74,7 @@ def patch_tmd(tmd_path, ios, log):
     log('  tmd: IOS %d -> IOS %d (signature invalidated)' % (old & 0xFF, ios))
 
 
-def run_patch(image_path, out_dir, ios58, log, done):
+def run_patch(image_path, out_dir, log, done):
     try:
         wit = find_wit()
         if wit is None:
@@ -114,12 +122,11 @@ def run_patch(image_path, out_dir, ios58, log, done):
             open(dol_path, 'wb').write(bytes(data))
             log('  patched main.dol (%d writes)' % len(patches))
 
-            if ios58:
-                tmd_path = find_file(fst, 'tmd.bin')
-                if tmd_path:
-                    patch_tmd(tmd_path, 58, log)
-                else:
-                    log('  no tmd.bin found, skipping IOS 58 patch')
+            tmd_path = find_file(fst, 'tmd.bin')
+            if tmd_path:
+                patch_tmd(tmd_path, 58, log)
+            else:
+                log('  no tmd.bin found, skipping IOS 58 patch')
 
             os.makedirs(out_dir, exist_ok=True)
             out = os.path.join(out_dir, '%s_SDHC.wbfs' % key)
@@ -144,7 +151,6 @@ class App(tk.Tk):
 
         self.image_var = tk.StringVar()
         self.out_var = tk.StringVar()
-        self.ios58_var = tk.BooleanVar(value=False)
         self.msgq = queue.Queue()
 
         pad = {'padx': 8, 'pady': 6}
@@ -160,9 +166,6 @@ class App(tk.Tk):
         r2 = ttk.Frame(row); r2.pack(fill='x')
         ttk.Entry(r2, textvariable=self.out_var).pack(side='left', fill='x', expand=True)
         ttk.Button(r2, text='Browse...', command=self.pick_out).pack(side='left', padx=(6, 0))
-
-        ttk.Checkbutton(self, text='Also require IOS 58 (Dolphin / fakesigned only)',
-                         variable=self.ios58_var).pack(anchor='w', **pad)
 
         self.patch_btn = ttk.Button(self, text='Patch', command=self.start_patch)
         self.patch_btn.pack(**pad)
@@ -232,7 +235,7 @@ class App(tk.Tk):
 
         threading.Thread(
             target=run_patch,
-            args=(image_path, out_dir, self.ios58_var.get(), log, done),
+            args=(image_path, out_dir, log, done),
             daemon=True,
         ).start()
 

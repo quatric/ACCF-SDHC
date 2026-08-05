@@ -103,8 +103,8 @@ python3 tools/gui.py
 
 Pick a `.wbfs`/`.iso`, pick an output folder, click Patch. It extracts the
 disc, reads its own id/revision, applies the matching site map to its own
-`main.dol`, and rebuilds the WBFS — optionally also repointing the TMD at
-IOS 58. Running it from source needs [Wiimms ISO Tool](https://wit.wiimm.de/)
+`main.dol`, repoints the TMD at IOS 58 (see below), and rebuilds the WBFS.
+Running it from source needs [Wiimms ISO Tool](https://wit.wiimm.de/)
 (`wit`) on `PATH`; the packaged builds below bundle it, no separate install
 needed.
 
