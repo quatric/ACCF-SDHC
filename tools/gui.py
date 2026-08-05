@@ -84,7 +84,7 @@ def run_patch(image_path, out_dir, log, done):
         with tempfile.TemporaryDirectory(prefix='sdhc_patch_') as fst:
             log('extracting %s...' % os.path.basename(image_path))
             r = subprocess.run([wit, 'extract', image_path, '--dest', fst,
-                                 '--psel', 'data', '-q'],
+                                 '--psel', 'data', '--overwrite', '-q'],
                                 capture_output=True, text=True)
             if r.returncode:
                 raise RuntimeError('extract failed:\n' + (r.stderr or r.stdout))
@@ -131,7 +131,7 @@ def run_patch(image_path, out_dir, log, done):
             os.makedirs(out_dir, exist_ok=True)
             out = os.path.join(out_dir, '%s_SDHC.wbfs' % key)
             log('rebuilding wbfs...')
-            r = subprocess.run([wit, 'copy', fst, '--dest', out, '--wbfs', '-q'],
+            r = subprocess.run([wit, 'copy', fst, '--dest', out, '--wbfs', '--overwrite', '-q'],
                                 capture_output=True, text=True)
             if r.returncode:
                 raise RuntimeError('rebuild failed:\n' + (r.stderr or r.stdout))
