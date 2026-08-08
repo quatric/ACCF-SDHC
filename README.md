@@ -9,10 +9,9 @@ Ported from **SDHC Extension 1.1 [Bero]** by way of *My Pokémon Ranch*.
 1. **Download** `ACCF-SDHC-Patcher` for your platform from
    [Releases](https://github.com/quatric/ACCF-SDHC/releases).
 2. **Drop your `.wbfs`/`.iso` on the window.** It reads the disc's own ID and
-   revision, applies the matching patch, retargets the title to IOS 58, and
-   rebuilds the image in place. The original is kept as `<name>.bak`.
-3. **Play.** Your console needs IOS 58 installed and a loader that accepts
-   fakesigned discs — the TMD change invalidates the disc signature.
+   revision, applies the matching patch, and rebuilds the image in place. The
+   original is kept as `<name>.bak`.
+3. **Play.**
 
 That's the whole thing. The patcher will refuse a disc it doesn't recognize
 rather than guess, so it cannot apply the wrong revision's addresses.
@@ -149,17 +148,10 @@ Patching in place is deliberate: USB loaders key off the
 original can leave the loader unable to launch the title (it drops straight
 back to the Homebrew Channel). Keeping the filename and folder avoids that.
 
-It also retargets the TMD to **IOS 58**, and that is not optional. IOS 38's
-SDIO module never takes the SDv2 init path (see
-[IOS requirement](#ios-requirement)), so a disc carrying the SDHC patch while
-still requesting IOS 38 latches block addressing against a driver that cannot
-do it — the title dies early rather than merely failing to see the card.
-Confirmed by diffing a working RUUP01 build against a broken one: the SDHC
-codecave was byte-identical and `sys_version` was the only functional
-difference.
-
-This invalidates the TMD signature, so the console needs IOS 58 installed and
-a loader that accepts fakesigned discs.
+It does not touch the TMD, so the disc keeps requesting its stock IOS and no
+signature is invalidated. (An earlier build of this patcher also retargeted
+the TMD to IOS 58 — see [IOS requirement](#ios-requirement) for why that was
+tried and why it's no longer part of the GUI's default patch.)
 
 Running from source needs [Wiimms ISO Tool](https://wit.wiimm.de/) (`wit`) on
 `PATH`, plus `tkinterdnd2` for drag-and-drop (without it the window still
@@ -209,19 +201,21 @@ in its r13 SDA offset.
 
 The stock TMD requests **IOS 38**, whose SDIO module does not take the SDv2
 initialization path. This is why the card can report CCS/SDHC while remaining
-uninitialized; the ACMD41 literal is not the missing patch point. Retarget the
-TMD to **IOS 58** with `tools/patch_tmd_ios.py` (or pass `--ios58` to
-`tools/mkwbfs.py` for a rebuilt WBFS):
+uninitialized; the ACMD41 literal is not the missing patch point. The GUI
+patcher no longer retargets the TMD automatically. If you hit this, you can
+still retarget it by hand to **IOS 58** with `tools/patch_tmd_ios.py` (or pass
+`--ios58` to `tools/mkwbfs.py` for a rebuilt WBFS) — note this invalidates the
+TMD signature, so it needs IOS 58 installed and a loader/WAD that accepts
+fakesigned discs:
 
 ```sh
 python3 tools/patch_tmd_ios.py path/to/tmd.bin 58
 python3 tools/patch_tmd_ios.py path/to/tmd.bin --show
 ```
 
-This invalidates the TMD signature. It works in Dolphin and with a fakesigned
-loader; real hardware also needs IOS 58 installed and a fakesigned/repacked
-WAD. With IOS 58, Dolphin reported the card initialized, performed SDHC block
-DMA, and completed a photo save.
+It works in Dolphin and with a fakesigned loader. With IOS 58, Dolphin
+reported the card initialized, performed SDHC block DMA, and completed a
+photo save.
 
 ## Verification
 
