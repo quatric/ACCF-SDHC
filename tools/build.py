@@ -49,7 +49,7 @@ HOOKS = [
         0x41820028,   # beq     +0x28              ; no -> original CSD v1 path
         0x38000009,   # li      r0,9
         0x8061000C,   # lwz     r3,0xc(r1)
-        0x5463C43E,   # rlwinm  r3,r3,24,16,31     ; C_SIZE (v2, 22-bit)
+        0x5463C2BE,   # rlwinm  r3,r3,24,10,31     ; C_SIZE (v2, 22-bit)
         0x38630001,   # addi    r3,r3,1
         0x1CC30400,   # mulli   r6,r3,0x400        ; sectors = (C_SIZE+1) * 1024
         0x3C608021,   # lis     r3,0x8021
